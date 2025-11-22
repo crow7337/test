@@ -1,0 +1,42 @@
+name: Build ForceFullRes dylib
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-12   # <-- IMPORTANT: old SDK still includes OpenGL ES
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download official fishhook
+        run: |
+          git clone https://github.com/facebook/fishhook.git
+          cp fishhook/fishhook.c fishhook/fishhook.h .
+
+      - name: List repo after preparation
+        run: ls -R .
+
+      - name: Build ForceFullRes.dylib
+        run: |
+          SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
+
+          clang -arch arm64 \
+                -dynamiclib \
+                -isysroot $SDK_PATH \
+                -framework UIKit \
+                -framework OpenGLES \
+                -fobjc-arc \
+                ForceFullRes.m fishhook.c \
+                -o ForceFullRes.dylib \
+                -Wl,-undefined,dynamic_lookup
+
+          ls -lh ForceFullRes.dylib
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ForceFullRes-dylib
+          path: ForceFullRes.dylib

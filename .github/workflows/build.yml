@@ -6,23 +6,32 @@ on:
 jobs:
   build:
     runs-on: macos-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Xcode command line tools
+      - name: Verify files exist
         run: |
-          sudo xcode-select --switch /Applications/Xcode.app || true
+          echo "Listing repo:"
+          ls -R .
 
       - name: Build ForceFullRes.dylib
         run: |
-          clang -arch arm64 -dynamiclib -o ForceFullRes.dylib ForceFullRes.m fishhook.c -framework UIKit -framework OpenGLES -fobjc-arc -isysroot $(xcrun --sdk iphoneos --show-sdk-path) -Wl,-undefined,dynamic_lookup
-          # strip to reduce size
-          xcrun -sdk iphoneos lipo -thin arm64 ForceFullRes.dylib -output ForceFullRes.arm64.dylib || true
-          mv ForceFullRes.arm64.dylib ForceFullRes.dylib || true
+          SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
+          clang -arch arm64 \
+                -dynamiclib \
+                -isysroot $SDK_PATH \
+                -framework UIKit \
+                -framework OpenGLES \
+                -fobjc-arc \
+                ForceFullRes.m fishhook.c \
+                -o ForceFullRes.dylib \
+                || (echo "BUILD FAILED"; exit 1)
+
           ls -lh ForceFullRes.dylib
 
-      - name: Archive artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ForceFullRes-dylib
